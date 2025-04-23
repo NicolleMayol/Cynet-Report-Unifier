@@ -15,7 +15,7 @@ def verificar_instalar_dependencias():
     dependencias = ['pymupdf', 'reportlab', 'pillow']
     
     # Usar pip directamente sin entorno virtual para simplificar
-    print("Checking and installing required dependencies...")
+    print("Verificando e instalando dependencias...")
     
     # Determinar el comando pip a usar
     if os.name == 'nt':  # Windows
@@ -34,7 +34,7 @@ def verificar_instalar_dependencias():
             continue
     
     if not pip_exe:
-        print("Could not find pip. Please install pip manually and try again.")
+        print("No se pudo encontrar pip. Por favor instale pip manualmente y vuelva a intentar.")
         return None
     
     # Instalar dependencias
@@ -47,16 +47,16 @@ def verificar_instalar_dependencias():
                 __import__('PIL')
             else:
                 __import__(dep)
-            print(f"✓ {dep} is already installed")
+            print(f"✓ {dep} ya está instalado")
         except ImportError:
-            print(f"Installing {dep}...")
+            print(f"Instalando {dep}...")
             try:
                 subprocess.run(f'{pip_exe} install {dep}', shell=True, check=True)
-                print(f"✓ {dep} installed successfully")
+                print(f"✓ {dep} instalado correctamente")
             except subprocess.CalledProcessError:
-                print(f"Error installing {dep}. Try installing it manually with: pip install {dep}")
+                print(f"Error instalando {dep}. Intente instalarlo manualmente corriendo: pip install {dep}")
                 if dep == 'pymupdf':
-                    print("Note: pymupdf can also be installed as 'pip install PyMuPDF'")
+                    print("Nota: pymupdf también puede ser instalado corriendo 'pip install PyMuPDF'")
     
     return None
 
@@ -596,13 +596,13 @@ def crear_informe_unificado(datos_todos, ruta_salida, ruta_logo, iconos=None):
 def main():
     """Función principal que ejecuta el proceso completo."""
     print("=" * 80)
-    print("  CYNET PDF REPORTS UNIFIER")
+    print("  UNIFICADOR DE REPORTES EJECUTIVOS CYNET PDF ")
     print("=" * 80)
-    print("\nThis script combines three Cynet PDF reports into a single unified report.")
-    print("It extracts specific information from each report and presents it in a consolidated format.\n")
+    print("\n Este script unifica tres reportes de Cynet en un único reporte unificado.")
+    print("Extra información específica de cada reporte y lo presenta en un formato consolidado.\n")
     
     # Verificar e instalar dependencias
-    print("Checking required dependencies...")
+    print("Verificando dependencias...")
     verificar_instalar_dependencias()
     
     # Importar módulos después de verificar dependencias
@@ -613,7 +613,7 @@ def main():
     logo_path = os.path.join(script_dir, "cynet_logo.png")
     
     if not os.path.exists(logo_path):
-        print("Cynet logo not found. Looking in alternative locations...")
+        print("Logo de Cynet no encontrado, buscando en ubicaciones alternativas....")
         # Buscar en ubicaciones alternativas
         alt_locations = [
             os.path.join(os.path.dirname(script_dir), "cynet_logo.png"),
@@ -629,7 +629,7 @@ def main():
                 break
         
         if not os.path.exists(logo_path):
-            print("Warning: Cynet logo not found. The report will be generated without the logo.")
+            print("Warning: Logo de Cynet no encontrado. El reporte será generado sin logo.")
             # Usar un placeholder para el logo
             from reportlab.lib.utils import ImageReader
             from PIL import Image, ImageDraw
@@ -645,7 +645,7 @@ def main():
             print(f"Created placeholder logo at: {logo_path}")
     
     # Crear iconos embebidos (en lugar de SVG)
-    print("Creating Cynet icons...")
+    print("Creando íconos...")
     try:
         iconos = crear_iconos_embebidos()
         print("Icons created successfully.")
@@ -654,12 +654,12 @@ def main():
         iconos = None
     
     # Solicitar las rutas de los archivos PDF
-    print("\nPlease provide the paths for the three PDF files:")
+    print("\nProporcione las rutas de los tres archivos PDF:")
     
     rutas_pdf = []
     for i in range(3):
         while True:
-            ruta = input(f"Path to PDF {i+1}: ").strip()
+            ruta = input(f"Ruta del PDF {i+1}: ").strip()
             if ruta.startswith('"') and ruta.endswith('"'):
                 ruta = ruta[1:-1]  # Eliminar comillas si están presentes
             
@@ -667,10 +667,10 @@ def main():
                 rutas_pdf.append(ruta)
                 break
             else:
-                print("Error: The provided path does not exist or is not a PDF file. Please try again.")
+                print("Error: La ruta proporcionada no existe o no es un archivo PDF. Inténtalo de nuevo.")
     
     # Solicitar la ruta de salida para el PDF unificado
-    ruta_salida = input("\nPath to save the unified PDF (leave blank to use the current directory): ").strip()
+    ruta_salida = input("\nRuta para guardar el PDF unificado (déjelo en blanco para usar el directorio actual): ").strip()
     if ruta_salida.startswith('"') and ruta_salida.endswith('"'):
         ruta_salida = ruta_salida[1:-1]  # Eliminar comillas si están presentes
     
@@ -684,27 +684,27 @@ def main():
     # Crear el directorio de salida si no existe
     os.makedirs(os.path.dirname(os.path.abspath(ruta_salida)), exist_ok=True)
     
-    print("\nProcessing PDF files...")
+    print("\nProcesando archivos PDF...")
     
     # Extraer datos de todos los PDFs
     todos_datos = []
     for ruta in rutas_pdf:
-        print(f"Extracting data from: {os.path.basename(ruta)}")
+        print(f"Extrayendo data de: {os.path.basename(ruta)}")
         datos = extraer_datos_pdf(ruta)
         todos_datos.append(datos)
         
         # Mostrar las fuentes encontradas (si están disponibles)
         if 'fonts' in datos:
-            print(f"Fonts found in {os.path.basename(ruta)}: {', '.join(datos['fonts'])}")
+            print(f"Fuentes encontradas en {os.path.basename(ruta)}: {', '.join(datos['fonts'])}")
     
     # Crear el informe unificado con estilo Cynet
-    print("\nCreating unified report with Cynet branding...")
+    print("\nCreando un informe unificado con la marca Cynet...")
     ruta_final = crear_informe_unificado(todos_datos, ruta_salida, logo_path, iconos)
     
-    print(f"\nProcess completed successfully!")
-    print(f"The unified Cynet report has been saved to: {os.path.abspath(ruta_final)}")
+    print(f"\n¡Proceso completado exitosamente!")
+    print(f"El informe unificado de Cynet se ha guardado en: {os.path.abspath(ruta_final)}")
     
-    print("\nPress Enter to exit...")
+    print("\nPresione Enter para salir...")
     input()
 
 if __name__ == "__main__":
@@ -712,7 +712,7 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         print(f"\nError: {str(e)}")
-        print("\nAn unexpected error occurred. Please try again.")
-        print("If the problem persists, contact technical support.")
-        print("\nPress Enter to exit...")
+        print("\nSe produjo un error inesperado. Inténtalo de nuevo.")
+        print("Si el problema persiste, contacte con el equipo de Optimus.")
+        print("\nPresione Enter para salir...")
         input()
