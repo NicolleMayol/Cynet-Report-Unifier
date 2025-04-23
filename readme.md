@@ -20,11 +20,15 @@ Esta herramienta combina múltiples PDFs de Informes Ejecutivos de Cynet en un �
 
 ## Instalación
 
-1. Descargue todos los archivos en una carpeta de su computadora:
+1. Descargue el release desde GitHub: [https://github.com/NicolleMayol/Cynet-Report-Unifier/releases](https://github.com/NicolleMayol/Cynet-Report-Unifier/releases)
+   
+   El release contiene todos los archivos necesarios:
    - `cynet_pdf_unifier_fixed.py` (script principal)
    - `run_cynet_unifier_fixed.bat` (lanzador para Windows)
    - `run_cynet_unifier_fixed.sh` (lanzador para macOS/Linux)
    - Opcional: `cynet_logo.png` (para el correcto uso de la marca)
+
+   Los scripts .bat y .sh están disponibles directamente para descargar desde el release de GitHub.
 
 2. Asegúrese de tener Python 3.6+ instalado en su sistema.
 
@@ -32,7 +36,7 @@ Esta herramienta combina múltiples PDFs de Informes Ejecutivos de Cynet en un �
 
 ### Para usuarios de Windows:
 
-1. Descargue todos los archivos en una carpeta de su computadora (descomprima si es necesario)
+1. Descargue los archivos del release de GitHub
 2. Haga doble clic en el archivo `run_cynet_unifier_fixed.bat`
 3. Siga las instrucciones en pantalla:
    - Ingrese las rutas a tres PDFs de Informes Ejecutivos de Cynet cuando se le solicite
@@ -40,7 +44,7 @@ Esta herramienta combina múltiples PDFs de Informes Ejecutivos de Cynet en un �
 
 ### Para usuarios de macOS/Linux:
 
-1. Descargue todos los archivos en una carpeta de su computadora
+1. Descargue los archivos del release de GitHub
 2. Abra una terminal y navegue hasta la carpeta que contiene los archivos
 3. Haga ejecutable el script de shell ejecutando:
    ```
