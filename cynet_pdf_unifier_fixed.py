@@ -10,6 +10,7 @@ import base64
 from io import BytesIO
 
 # Función para verificar e instalar dependencias
+# Función para verificar e instalar dependencias
 def verificar_instalar_dependencias():
     """Verifica e instala las dependencias necesarias si no están presentes."""
     dependencias = ['pymupdf', 'reportlab', 'pillow']
@@ -47,12 +48,12 @@ def verificar_instalar_dependencias():
                 __import__('PIL')
             else:
                 __import__(dep)
-            print(f"✓ {dep} ya está instalado")
+            print(f"[OK] {dep} ya está instalado")
         except ImportError:
             print(f"Instalando {dep}...")
             try:
                 subprocess.run(f'{pip_exe} install {dep}', shell=True, check=True)
-                print(f"✓ {dep} instalado correctamente")
+                print(f"[OK] {dep} instalado correctamente")
             except subprocess.CalledProcessError:
                 print(f"Error instalando {dep}. Intente instalarlo manualmente corriendo: pip install {dep}")
                 if dep == 'pymupdf':
@@ -593,13 +594,14 @@ def crear_informe_unificado(datos_todos, ruta_salida, ruta_logo, iconos=None):
     return ruta_salida
 
 # Función principal
+# Función principal
 def main():
     """Función principal que ejecuta el proceso completo."""
     print("=" * 80)
     print("  UNIFICADOR DE REPORTES EJECUTIVOS CYNET PDF ")
     print("=" * 80)
-    print("\n Este script unifica tres reportes de Cynet en un único reporte unificado.")
-    print("Extra información específica de cada reporte y lo presenta en un formato consolidado.\n")
+    print("\n Este script unifica informes de Cynet en un único reporte unificado.")
+    print("Extrae información específica de cada reporte y lo presenta en un formato consolidado.\n")
     
     # Verificar e instalar dependencias
     print("Verificando dependencias...")
@@ -607,6 +609,208 @@ def main():
     
     # Importar módulos después de verificar dependencias
     import fitz  # PyMuPDF
+    import glob
+    import re
+    from datetime import datetime
+    
+    # Configurar codificación para consolas Windows
+    if os.name == 'nt':
+        # Intentar configurar la consola para UTF-8
+        try:
+            import codecs
+            sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer)
+        except:
+            pass  # Si falla, continuamos con la configuración predeterminada
+    
+    # Definir la ruta predeterminada según el sistema operativo
+    if os.name == 'nt':  # Windows
+        reports_dir = r"C:\Cynet_Reports"
+    else:  # Linux/Mac
+        home_dir = os.path.expanduser("~")
+        reports_dir = os.path.join(home_dir, "Cynet_Reports")
+    
+    # Verificar si existe el directorio de informes
+    if not os.path.exists(reports_dir):
+        print(f"Directorio predeterminado no encontrado: {reports_dir}")
+        while True:
+            respuesta = input("¿Desea crear este directorio (C), especificar otra ruta (E) o cancelar (X)? ").strip().upper()
+            
+            if respuesta == 'C':
+                try:
+                    os.makedirs(reports_dir)
+                    print(f"Directorio creado: {reports_dir}")
+                    print(f"Por favor, coloque los archivos PDF de Cynet en: {reports_dir}")
+                    print("\nPresione Enter para salir...")
+                    input()
+                    return
+                except Exception as e:
+                    print(f"Error al crear el directorio {reports_dir}: {e}")
+                    # Continúa al caso de especificar otra ruta
+            
+            if respuesta == 'E':
+                nueva_ruta = input("Introduzca la ruta completa donde se encuentran los archivos PDF de Cynet: ").strip()
+                
+                # Eliminar comillas si el usuario las agregó
+                if (nueva_ruta.startswith('"') and nueva_ruta.endswith('"')) or \
+                   (nueva_ruta.startswith("'") and nueva_ruta.endswith("'")):
+                    nueva_ruta = nueva_ruta[1:-1]
+                
+                if os.path.exists(nueva_ruta):
+                    reports_dir = nueva_ruta
+                    print(f"Usando directorio: {reports_dir}")
+                    break
+                else:
+                    print(f"La ruta especificada no existe: {nueva_ruta}")
+                    crear_dir = input("¿Desea crear este directorio? (S/N): ").strip().upper()
+                    if crear_dir == 'S':
+                        try:
+                            os.makedirs(nueva_ruta)
+                            print(f"Directorio creado: {nueva_ruta}")
+                            print(f"Por favor, coloque los archivos PDF de Cynet en: {nueva_ruta}")
+                            print("\nPresione Enter para salir...")
+                            input()
+                            return
+                        except Exception as e:
+                            print(f"Error al crear el directorio {nueva_ruta}: {e}")
+                    # Vuelve al principio del bucle para pedir otra ruta
+            
+            elif respuesta == 'X':
+                print("Operación cancelada.")
+                print("\nPresione Enter para salir...")
+                input()
+                return
+            
+            else:
+                print("Opción no válida. Por favor, elija C, E o X.")
+    
+    # Buscar archivos PDF en el directorio
+    pdf_files = glob.glob(os.path.join(reports_dir, "*.pdf"))
+    
+    if not pdf_files:
+        print(f"No se encontraron archivos PDF en {reports_dir}")
+        print(f"Por favor, coloque los archivos PDF de Cynet en: {reports_dir}")
+        print("\nPresione Enter para salir...")
+        input()
+        return
+    
+    # Analizar los períodos disponibles en los archivos
+    print("\nAnalizando archivos PDF encontrados...")
+    
+    # Patrón para extraer fechas del nombre del archivo
+    # Ejemplo: ExecutiveReport_Demo-Console---AIO---SignUp---SaaS_8-Mar-2025---8-Apr-2025.pdf
+    patron_fecha = r'(\d+-[A-Za-z]+-\d+)---(\d+-[A-Za-z]+-\d+)'
+    
+    # Lista para almacenar información de los períodos
+    informes_disponibles = []
+    
+    # Diccionario para traducir nombres de meses
+    meses_completos = {
+        'Jan': 'Enero', 'Feb': 'Febrero', 'Mar': 'Marzo', 'Apr': 'Abril',
+        'May': 'Mayo', 'Jun': 'Junio', 'Jul': 'Julio', 'Aug': 'Agosto',
+        'Sep': 'Septiembre', 'Oct': 'Octubre', 'Nov': 'Noviembre', 'Dec': 'Diciembre'
+    }
+    
+    for archivo in pdf_files:
+        nombre_archivo = os.path.basename(archivo)
+        match = re.search(patron_fecha, nombre_archivo)
+        
+        if match:
+            fecha_inicio = match.group(1)  # 8-Mar-2025
+            fecha_fin = match.group(2)     # 8-Apr-2025
+            
+            # Extraer componentes de las fechas
+            try:
+                dia_inicio, mes_inicio_abr, año_inicio = fecha_inicio.split('-')
+                dia_fin, mes_fin_abr, año_fin = fecha_fin.split('-')
+                
+                # Convertir a nombres completos en español
+                mes_inicio = meses_completos.get(mes_inicio_abr, mes_inicio_abr)
+                mes_fin = meses_completos.get(mes_fin_abr, mes_fin_abr)
+                
+                # Crear descripción del período
+                if mes_inicio == mes_fin and año_inicio == año_fin:
+                    periodo = f"{mes_inicio} {año_inicio}"
+                elif año_inicio == año_fin:
+                    periodo = f"{mes_inicio} a {mes_fin} {año_inicio}"
+                else:
+                    periodo = f"{mes_inicio} {año_inicio} a {mes_fin} {año_fin}"
+                
+                # Almacenar información del informe
+                informes_disponibles.append({
+                    'archivo': archivo,
+                    'periodo': periodo,
+                    'fecha_inicio': fecha_inicio,
+                    'fecha_fin': fecha_fin,
+                    'nombre_archivo': nombre_archivo
+                })
+            except ValueError:
+                # Si hay un error al procesar las fechas, omitir este archivo
+                continue
+    
+    if not informes_disponibles:
+        print("No se encontraron archivos con el formato de nombre esperado.")
+        print("Los archivos deben tener un formato como: ExecutiveReport_Nombre_8-Mar-2025---8-Apr-2025.pdf")
+        print("\nPresione Enter para salir...")
+        input()
+        return
+    
+    # Agrupar informes por período
+    informes_por_periodo = {}
+    for informe in informes_disponibles:
+        periodo = informe['periodo']
+        if periodo not in informes_por_periodo:
+            informes_por_periodo[periodo] = []
+        informes_por_periodo[periodo].append(informe)
+    
+    # Mostrar períodos disponibles
+    print("\nPeríodos disponibles en los informes:")
+    periodos = list(informes_por_periodo.keys())
+    
+    # Tratar de ordenar los períodos cronológicamente
+    def get_sort_key(periodo):
+        # Intentar extraer año y mes para ordenar
+        if ' a ' in periodo:
+            # Para períodos como "Marzo a Abril 2025"
+            partes = periodo.split(' a ')
+            if len(partes) == 2:
+                inicio = partes[0]
+                if ' ' in inicio:
+                    mes, año = inicio.rsplit(' ', 1)
+                    try:
+                        año = int(año)
+                        mes_idx = list(meses_completos.values()).index(mes) if mes in meses_completos.values() else 0
+                        return año * 100 + mes_idx
+                    except (ValueError, IndexError):
+                        pass
+        return periodo  # Si no podemos analizar, usar el texto completo
+    
+    periodos.sort(key=get_sort_key)
+    
+    for i, periodo in enumerate(periodos):
+        cantidad = len(informes_por_periodo[periodo])
+        print(f"  {i+1}. {periodo} ({cantidad} informes)")
+    
+    # Solicitar al usuario el período que desea procesar
+    while True:
+        try:
+            seleccion = input("\nSeleccione el número del período que desea procesar: ")
+            indice = int(seleccion) - 1
+            
+            if 0 <= indice < len(periodos):
+                periodo_seleccionado = periodos[indice]
+                break
+            else:
+                print(f"Por favor, ingrese un número entre 1 y {len(periodos)}")
+        except ValueError:
+            print("Por favor, ingrese un número válido")
+    
+    # Obtener los archivos del período seleccionado
+    informes_seleccionados = informes_por_periodo[periodo_seleccionado]
+    rutas_pdf = [informe['archivo'] for informe in informes_seleccionados]
+    
+    print(f"\nSe procesarán {len(rutas_pdf)} archivos del período {periodo_seleccionado}:")
+    for i, informe in enumerate(informes_seleccionados):
+        print(f"  {i+1}. {informe['nombre_archivo']}")
     
     # Verificar si el logo de Cynet existe
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -653,36 +857,10 @@ def main():
         print(f"Warning: Could not create icons: {e}")
         iconos = None
     
-    # Solicitar las rutas de los archivos PDF
-    print("\nProporcione las rutas de los tres archivos PDF:")
-    
-    rutas_pdf = []
-    for i in range(3):
-        while True:
-            ruta = input(f"Ruta del PDF {i+1}: ").strip()
-            if ruta.startswith('"') and ruta.endswith('"'):
-                ruta = ruta[1:-1]  # Eliminar comillas si están presentes
-            
-            if os.path.exists(ruta) and ruta.lower().endswith('.pdf'):
-                rutas_pdf.append(ruta)
-                break
-            else:
-                print("Error: La ruta proporcionada no existe o no es un archivo PDF. Inténtalo de nuevo.")
-    
-    # Solicitar la ruta de salida para el PDF unificado
-    ruta_salida = input("\nRuta para guardar el PDF unificado (déjelo en blanco para usar el directorio actual): ").strip()
-    if ruta_salida.startswith('"') and ruta_salida.endswith('"'):
-        ruta_salida = ruta_salida[1:-1]  # Eliminar comillas si están presentes
-    
-    if not ruta_salida:
-        ruta_salida = os.path.join(os.getcwd(), "unified_cynet_report.pdf")
-    elif os.path.isdir(ruta_salida):
-        ruta_salida = os.path.join(ruta_salida, "unified_cynet_report.pdf")
-    elif not ruta_salida.lower().endswith('.pdf'):
-        ruta_salida += ".pdf"
-    
-    # Crear el directorio de salida si no existe
-    os.makedirs(os.path.dirname(os.path.abspath(ruta_salida)), exist_ok=True)
+    # Definir ruta de salida automáticamente con el período en el nombre
+    # Reemplazar espacios y caracteres especiales para el nombre de archivo
+    nombre_periodo = periodo_seleccionado.replace(' ', '_').replace('/', '-')
+    ruta_salida = os.path.join(reports_dir, f"unified_cynet_report_{nombre_periodo}.pdf")
     
     print("\nProcesando archivos PDF...")
     
